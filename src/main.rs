@@ -12,6 +12,8 @@ const A4_HEIGHT: f32 = 842.0;
 const FONT_FAMILY: BuiltinFont = BuiltinFont::Helvetica;
 const FONT_SIZE: f32 = 24.0;
 const LINE_SPACING: f32 = 10.0;
+const SHOW_LINE_PAD: u64 = 9;
+const BLOCK_SIZE_BYTES: u64 = 1024;
 
 mod messenger;
 mod utils;
@@ -21,6 +23,14 @@ use utils::PDFColor;
 
 
 #[derive(Parser, Debug, Clone)]
+/// Example PDF generator
+///
+/// Use it to generate PDFs to test with development account.
+/// Can be used to generate visually distinguishable PDFs with
+/// defined filesize and pages.
+///
+///
+
 #[command(author, version, about, arg_required_else_help(true))]
 pub struct Args {
     /// Text color, web color names and hex codes (without #) are supported
@@ -126,14 +136,14 @@ fn render_page(pdf: &mut Pdf, args: &Args, page: &u16, msg: &Messenger) {
 }
 
 fn generate_data(canvas: &mut Canvas, size: ByteSize) -> Result<(), std::io::Error> {
-    let line_gen: String = "_".repeat(1024-9);
+    let line_gen: String = "_".repeat((BLOCK_SIZE_BYTES - SHOW_LINE_PAD) as usize);
     canvas.text(|t| {
         t.pos(0.0, 0.0)?;
         let mut k = ByteSize::b(0);
 
         while k < size {
             t.show(&line_gen)?;
-            k += ByteSize::b(1024)
+            k += ByteSize::b(BLOCK_SIZE_BYTES)
         };
         Ok(())
     })?;
