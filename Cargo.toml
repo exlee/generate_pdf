@@ -1,0 +1,19 @@
+[package]
+name = "generate_pdf"
+authors = ["Alexander Kaminski"]
+version = "0.1.0"
+edition = "2021"
+license = "Apache-2.0"
+keywords = ["pdf", "devtool", "generate"]
+categories = ["command-line-utilities", "filesystem"]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+pathsearch = "0.2.0"
+clap = { version = "4.1.4", features = ["derive"] }
+duct = "0.13.6"
+pdf-canvas = "0.7.0"
+rand = "0.8.5"
+bytesize = "1.1.0"
+csscolorparser = "0.6.2"
