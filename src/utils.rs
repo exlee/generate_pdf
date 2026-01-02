@@ -3,12 +3,11 @@ use csscolorparser::Color as CColor;
 use pdf_canvas::graphicsstate::Color;
 
 
-pub fn print_color_without_name_and_exit() -> &'static str {
+pub fn print_color_without_name() {
     println!("
 Color can't be converted to human-readable name.
 Use --output option or choose different color.
 ");
-    std::process::exit(1);
 }
 
 pub fn generate_random(length: u8) -> String {

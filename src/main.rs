@@ -1,26 +1,19 @@
 use bytesize::ByteSize;
 use clap::Parser;
-use pdf_canvas::{Pdf, BuiltinFont, Canvas};
-use std::fs::File;
 use std::time::SystemTime;
 use csscolorparser::Color as CColor;
+use std::fs::File;
 
 extern crate bytesize;
 
-const A4_WIDTH: f32 = 595.0;
-const A4_HEIGHT: f32 = 842.0;
-const FONT_FAMILY: BuiltinFont = BuiltinFont::Helvetica;
-const FONT_SIZE: f32 = 24.0;
-const LINE_SPACING: f32 = 10.0;
-const SHOW_LINE_PAD: u64 = 9;
-const BLOCK_SIZE_BYTES: u64 = 1024;
-
-mod messenger;
 mod utils;
+mod pdf;
+mod messenger;
+mod divider;
 
-use messenger::Messenger;
-use utils::PDFColor;
-
+//use messenger::Messenger;
+use pdf::generate_pdf;
+use crate::messenger::Messenger;
 
 #[derive(Parser, Debug, Clone)]
 /// Example PDF generator
@@ -70,127 +63,44 @@ pub struct Args {
     random_string: String,
     /// Show debug messages
     #[arg(long, default_value_t = false)]
-    debug: bool
-}
-
-fn render_page(pdf: &mut Pdf, args: &Args, page: &u16, msg: &Messenger) {
-    pdf.render_page(A4_WIDTH, A4_HEIGHT, |canvas| {
-        let canvas_font = canvas.get_font(FONT_FAMILY);
-        let text = args.text.join(" ");
-
-        let mut lines: Vec<String> = vec![text];
-
-        if !args.no_random_string {
-            lines.push(args.random_string.clone())
-        }
-
-        match (args.no_sizeinfo, args.size) {
-            (false, Some(size)) => lines.push(format!("File size: {}", size)),
-            (true, _) | (_, None) => {}
-        };
-
-        if args.pages > 1 && !args.no_pagenum {
-            lines.push(format!("Page {} of {}", *page + 1, args.pages))
-        }
-
-
-        let mut y_position = (A4_HEIGHT +
-            ((FONT_SIZE + LINE_SPACING) * (lines.len() as f32) - LINE_SPACING)
-        ) / 2.0 - FONT_SIZE;
-
-        for (idx, line) in lines.into_iter().enumerate() {
-            msg.debug(format!("CUR: {} Y: {y_position} Text: {line}", idx + 1));
-
-            canvas.text(|t| {
-                t.set_font(&canvas_font, FONT_SIZE)?;
-                t.set_fill_color(args.color.as_pdf_color())?;
-                let line_width = canvas_font.get_width(FONT_SIZE, &line);
-
-                t.pos(
-                    (A4_WIDTH - line_width)/2.0,
-                    y_position
-                )?;
-
-                // Center of the page
-                t.show(&line)?;
-
-                y_position -= LINE_SPACING + FONT_SIZE;
-
-                Ok(())
-            })?;
-            }
-
-        // If more pages - mark page
-        // Put random marker
-        if let Some(size) = args.size {
-            generate_data(
-                canvas,
-                ByteSize::b(
-                    size.as_u64() / (args.pages as u64)
-                )
-            )?
-        }
-
-        Ok(())
-    }).expect("Failed to generate page 0");
-}
-
-fn generate_data(canvas: &mut Canvas, size: ByteSize) -> Result<(), std::io::Error> {
-    let line_gen: String = "_".repeat((BLOCK_SIZE_BYTES - SHOW_LINE_PAD) as usize);
-    canvas.text(|t| {
-        t.pos(0.0, 0.0)?;
-        let mut k = ByteSize::b(0);
-
-        while k < size {
-            t.show(&line_gen)?;
-            k += ByteSize::b(BLOCK_SIZE_BYTES)
-        };
-        Ok(())
-    })?;
-    Ok(())
+    debug: bool,
+    /// Enables super-precise size generation
+    #[arg(long, default_value_t = false)]
+    super_precision: bool
 }
 
 fn main() {
     let start_time = SystemTime::now();
-
     let mut args = Args::parse();
 
-    let msg = Messenger::new(args.clone());
+    let desired_size = args.size.clone();
 
     args.random_string = utils::generate_random(10);
+
+    let msg = Messenger::new(args.clone());
 
     let output_file = match args.output {
         Some(ref name) => String::from(name),
         None =>  {
             let color_name = match args.color.name() {
                 Some(name) => name,
-                None =>
+                None => {
                     // Returns early
-                    utils::print_color_without_name_and_exit()
+                    utils::print_color_without_name();
+                    std::process::exit(1);
+                }
             };
             format!("sample-{}-{}.pdf", color_name, &args.random_string)
         }
     };
 
     let output_handle = File::create(&output_file).expect("Can't open file");
-    let cloned_handle = output_handle.try_clone().expect("Can't clone handle");
+    let file_size = generate_pdf(args, &msg, output_handle);
 
-    let mut document = Pdf::new(output_handle).expect("Can't create PDF!");
-    let mut cur_page = 0;
-
-    while cur_page < args.pages {
-        msg.debug(format!("Render page {}/{}", cur_page + 1, args.pages));
-        render_page(&mut document, &args, &cur_page, &msg);
-        msg.debug(format!("File size: {}", cloned_handle.metadata().unwrap().len()));
-        cur_page += 1;
-    }
-
-    msg.debug(format!("Final file size: {}", cloned_handle.metadata().unwrap().len()));
-    document.finish().expect("Can't finish!");
+    //let delta =  desired_size.unwrap().as_u64() as i64 - file_size.as_u64() as i64;
+    //println!("Ask for: {:?}", desired_size.unwrap().as_u64() as i64 + delta +);
 
     let milliseconds = start_time.elapsed().expect("SystemTime Failure");
-    let file_size = ByteSize::b(cloned_handle.metadata().unwrap().len());
-
     msg.stats(format!("Finished in {milliseconds:?}. Final file size: {file_size}.\nFile name: {output_file}"));
     msg.silent(format!("{output_file}"));
 }
