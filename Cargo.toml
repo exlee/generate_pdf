@@ -5,8 +5,10 @@ version = "0.1.1"
 edition = "2021"
 license = "MIT"
 repository = "https://github.com/exlee/generate_pdf"
-keywords = ["pdf", "sample", "generator", "development", "testing", "dummy", "fixture"]
+keywords = ["pdf", "generator", "development", "testing"]
 categories = ["command-line-utilities", "filesystem"]
+description = "Distinguishable sample PDF generator"
+readme = "README.md"
 
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html

@@ -12,7 +12,7 @@ permissions:
 
 env:
   CARGO_TERM_COLOR: always
-  BIN_NAME: generate_pdf
+  BIN_NAME: generate-sample-pdf
   # Override local config (like mold) to use default linker in CI
   RUSTFLAGS: ""
 
