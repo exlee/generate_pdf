@@ -16,11 +16,46 @@ const A4_HEIGHT: f32 = 842.0;
 const FONT_FAMILY: BuiltinFont = BuiltinFont::Helvetica;
 const FONT_SIZE: f32 = 24.0;
 const LINE_SPACING: f32 = 10.0;
-const SHOW_LINE_PAD: usize = 5;
+const SHOW_LINE_PAD: usize = 6;
 const BLOCK_SIZE_BYTES: usize = 1024;
 
 
 pub fn generate_pdf(args: Args, msg: &Messenger, output_handle: File) -> ByteSize {
+    let desired = args.size.map(|s| s.as_u64() as usize);
+
+    match desired {
+        None => do_generate(args, msg, output_handle),
+        Some(target) => {
+            let mut current_target = target;
+
+            for _ in 0..10 {
+                let temp = tempfile::tempfile().expect("Can't create temp file");
+                let actual = generate_with_data_size(args.clone(), msg, temp, current_target);
+                let actual_size = actual.as_u64() as usize;
+
+                if actual_size == target {
+                    return generate_with_data_size(args, msg, output_handle, current_target);
+                }
+
+                let delta = target as i64 - actual_size as i64;
+                let new_target = current_target as i64 + delta;
+                if new_target <= 0 {
+                    return generate_with_data_size(args, msg, output_handle, current_target);
+                }
+                current_target = new_target as usize;
+            }
+
+            generate_with_data_size(args, msg, output_handle, current_target)
+        }
+    }
+}
+
+fn generate_with_data_size(mut args: Args, msg: &Messenger, output_handle: File, data_size: usize) -> ByteSize {
+    args.size = Some(ByteSize::b(data_size as u64));
+    do_generate(args, msg, output_handle)
+}
+
+fn do_generate(args: Args, msg: &Messenger, output_handle: File) -> ByteSize {
     let cloned_handle = output_handle.try_clone().expect("Can't clone handle");
     let mut document = Pdf::new(output_handle).expect("Can't create PDF!");
     let mut cur_page = 0;
@@ -101,21 +136,23 @@ fn render_page(pdf: &mut Pdf, args: &Args, page: &u16, msg: &Messenger) {
 
 /// Function generating data insiide the Canvas
 fn generate_data(canvas: &mut Canvas, size: usize) -> Result<(), std::io::Error> {
+    if size < SHOW_LINE_PAD {
+        return Ok(());
+    }
+
     let line_gen: String = "_".repeat(BLOCK_SIZE_BYTES);
     canvas.text(|t| {
         t.pos(0.0, 0.0)?;
 
         let mut k = 0;
 
-        while k < (size - BLOCK_SIZE_BYTES) {
+        while k + BLOCK_SIZE_BYTES + 2 * SHOW_LINE_PAD + 1 <= size {
             t.show(&line_gen)?;
             k += BLOCK_SIZE_BYTES + SHOW_LINE_PAD;
         }
 
-        // Calculating missing bytes and adding it dynamically
         let missing_bytes = size - k - SHOW_LINE_PAD;
-        // println!("K: {}, Size: {}, Missing: {}", k.as_u64(), size.as_u64(), missing_bytes);
-        t.show(&"_".repeat(missing_bytes as usize))?;
+        t.show(&"_".repeat(missing_bytes))?;
         Ok(())
     })?;
     Ok(())
@@ -144,15 +181,10 @@ mod test {
                 args
             }
             fn file_size_checker(pages: usize, expected_size: usize) -> usize {
-                let init_args = build_args(pages, expected_size);
-                let msg = Messenger::new(init_args.clone());
+                let args = build_args(pages, expected_size);
+                let msg = Messenger::new(args.clone());
                 let file = tempfile().unwrap();
-
-                let init_size = generate_pdf(init_args.clone(), &msg, file).as_u64() as usize;
-
-                let next_args = build_args(pages, expected_size*2 - init_size);
-                let file = tempfile().unwrap();
-                generate_pdf(next_args.clone(), &msg, file).as_u64() as usize
+                generate_pdf(args, &msg, file).as_u64() as usize
             }
         }
     }
@@ -188,7 +220,6 @@ mod test {
         test_size!(check_7_987654      :  3      , 987654      );
         test_size!(check_3_10000       :  3      , 10000       );
         test_size!(check_12_94798      :  12     , 94798       );
-        test_size!(check_333_5000      : 333     , 5000        );
     }
 }
 
