@@ -1,12 +1,12 @@
 RUSTDOCFLAGS = --cfg docsrs
-CHECKS = __check_docs __check_tests __check_tests_all_features __check_audit __check_docsrs __check_cargo_check __check_clippy __check_fmt
+CHECKS = __check_docs __check_tests __check_tests_all_features __check_audit __check_cargo_check __check_clippy __check_fmt
 
 
 .PHONY: checks
 checks: $(CHECKS)
+	@$(MAKE) clean
 	cargo package --list
 	@printf "CHECKS COMPLETE\n"
-	@$(MAKE) clean
 
 clean:
 	@rm $(CHECKS)
@@ -43,7 +43,7 @@ __check_cargo_check:
 	@touch $@
 
 __check_clippy:
-	cargo clippy
+	cargo clippy -- -D warnings
 	@touch $@
 
 .PHONY:docs

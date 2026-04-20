@@ -1,13 +1,11 @@
-use pdf_canvas::{Pdf, BuiltinFont, Canvas};
-use std::fs::File;
 use bytesize::ByteSize;
-use clap::Parser;
+use pdf_canvas::{BuiltinFont, Canvas, Pdf};
+use std::fs::File;
 
+use crate::divider::divide_at;
+use crate::messenger::Messenger;
 use crate::utils::PDFColor;
 use crate::Args;
-use crate::messenger::Messenger;
-use crate::divider::divide_at;
-
 
 extern crate bytesize;
 
@@ -18,7 +16,6 @@ const FONT_SIZE: f32 = 24.0;
 const LINE_SPACING: f32 = 10.0;
 const SHOW_LINE_PAD: usize = 6;
 const BLOCK_SIZE_BYTES: usize = 1024;
-
 
 pub fn generate_pdf(args: Args, msg: &Messenger, output_handle: File) -> ByteSize {
     let desired = args.size.map(|s| s.as_u64() as usize);
@@ -50,7 +47,12 @@ pub fn generate_pdf(args: Args, msg: &Messenger, output_handle: File) -> ByteSiz
     }
 }
 
-fn generate_with_data_size(mut args: Args, msg: &Messenger, output_handle: File, data_size: usize) -> ByteSize {
+fn generate_with_data_size(
+    mut args: Args,
+    msg: &Messenger,
+    output_handle: File,
+    data_size: usize,
+) -> ByteSize {
     args.size = Some(ByteSize::b(data_size as u64));
     do_generate(args, msg, output_handle)
 }
@@ -62,12 +64,18 @@ fn do_generate(args: Args, msg: &Messenger, output_handle: File) -> ByteSize {
 
     while cur_page < args.pages {
         msg.debug(format!("Render page {}/{}", cur_page + 1, args.pages));
-        render_page(&mut document, &args, &cur_page, &msg);
-        msg.debug(format!("File size: {}", cloned_handle.metadata().unwrap().len()));
+        render_page(&mut document, &args, &cur_page, msg);
+        msg.debug(format!(
+            "File size: {}",
+            cloned_handle.metadata().unwrap().len()
+        ));
         cur_page += 1;
     }
 
-    msg.debug(format!("Final file size: {}", cloned_handle.metadata().unwrap().len()));
+    msg.debug(format!(
+        "Final file size: {}",
+        cloned_handle.metadata().unwrap().len()
+    ));
     document.finish().expect("Can't finish!");
 
     ByteSize::b(cloned_handle.metadata().unwrap().len())
@@ -86,19 +94,18 @@ fn render_page(pdf: &mut Pdf, args: &Args, page: &u16, msg: &Messenger) {
         }
 
         // Stamp page size
-        match (args.no_sizeinfo, args.size) {
-            (false, Some(size)) => lines.push(format!("File size: {}", size)),
-            (true, _) | (_, None) => {}
-        };
+        if let (false, Some(size)) = (args.no_sizeinfo, args.size) {
+            lines.push(format!("File size: {}", size));
+        }
 
         // Stamp page number
         if args.pages > 1 && !args.no_pagenum {
             lines.push(format!("Page {} of {}", *page + 1, args.pages))
         }
 
-        let mut y_position = (A4_HEIGHT +
-            ((FONT_SIZE + LINE_SPACING) * (lines.len() as f32) - LINE_SPACING)
-        ) / 2.0 - FONT_SIZE;
+        let mut y_position =
+            (A4_HEIGHT + ((FONT_SIZE + LINE_SPACING) * (lines.len() as f32) - LINE_SPACING)) / 2.0
+                - FONT_SIZE;
 
         for (idx, line) in lines.into_iter().enumerate() {
             msg.debug(format!("CUR: {} Y: {y_position} Text: {line}", idx + 1));
@@ -108,10 +115,7 @@ fn render_page(pdf: &mut Pdf, args: &Args, page: &u16, msg: &Messenger) {
                 t.set_fill_color(args.color.as_pdf_color())?;
                 let line_width = canvas_font.get_width(FONT_SIZE, &line);
 
-                t.pos(
-                    (A4_WIDTH - line_width)/2.0,
-                    y_position
-                )?;
+                t.pos((A4_WIDTH - line_width) / 2.0, y_position)?;
 
                 // Center of the page
                 t.show(&line)?;
@@ -125,14 +129,14 @@ fn render_page(pdf: &mut Pdf, args: &Args, page: &u16, msg: &Messenger) {
         if let Some(size) = args.size {
             generate_data(
                 canvas,
-                divide_at(size.as_u64() as usize, args.pages as usize, *page as usize)
+                divide_at(size.as_u64() as usize, args.pages as usize, *page as usize),
             )?
         }
 
         Ok(())
-    }).expect("Failed to generate page 0");
+    })
+    .expect("Failed to generate page 0");
 }
-
 
 /// Function generating data insiide the Canvas
 fn generate_data(canvas: &mut Canvas, size: usize) -> Result<(), std::io::Error> {
@@ -146,7 +150,7 @@ fn generate_data(canvas: &mut Canvas, size: usize) -> Result<(), std::io::Error>
 
         let mut k = 0;
 
-        while k + BLOCK_SIZE_BYTES + 2 * SHOW_LINE_PAD + 1 <= size {
+        while k + BLOCK_SIZE_BYTES + 2 * SHOW_LINE_PAD < size {
             t.show(&line_gen)?;
             k += BLOCK_SIZE_BYTES + SHOW_LINE_PAD;
         }
@@ -161,21 +165,23 @@ fn generate_data(canvas: &mut Canvas, size: usize) -> Result<(), std::io::Error>
 #[cfg(test)]
 mod test {
     use super::*;
-    use tempfile::tempfile;
+    use clap::Parser;
 
     macro_rules! header {
         () => {
-            use tempfile::tempfile;
             use super::*;
+            use tempfile::tempfile;
 
             fn build_args(pages: usize, expected_size: usize) -> Args {
                 let mut args = Args::parse_from([
                     "test",
                     "--no-sizeinfo",
-                    "--size",  &expected_size.to_string(),
-                    "--pages", &pages.to_string(),
-                    "red" ,
-                    "Example Text"
+                    "--size",
+                    &expected_size.to_string(),
+                    "--pages",
+                    &pages.to_string(),
+                    "red",
+                    "Example Text",
                 ]);
                 args.random_string = String::from("0000000000");
                 args
@@ -186,7 +192,7 @@ mod test {
                 let file = tempfile().unwrap();
                 generate_pdf(args, &msg, file).as_u64() as usize
             }
-        }
+        };
     }
 
     macro_rules! test_size {

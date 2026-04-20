@@ -1,7 +1,7 @@
 use crate::Args;
 
 pub struct Messenger {
-    args: Args
+    args: Args,
 }
 
 impl Messenger {
@@ -10,7 +10,9 @@ impl Messenger {
     }
 
     pub fn debug(&self, formatted_string: String) {
-        if self.args.silent { return }
+        if self.args.silent {
+            return;
+        }
 
         if self.args.debug {
             println!("{}", formatted_string);
@@ -18,7 +20,9 @@ impl Messenger {
     }
 
     pub fn stats(&self, formatted_string: String) {
-        if self.args.silent { return }
+        if self.args.silent {
+            return;
+        }
 
         if !self.args.no_stats {
             println!("{}", formatted_string);
@@ -30,5 +34,4 @@ impl Messenger {
             println!("{}", formatted_string);
         }
     }
-
 }

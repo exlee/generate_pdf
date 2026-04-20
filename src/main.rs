@@ -1,19 +1,19 @@
 use bytesize::ByteSize;
 use clap::Parser;
-use std::time::SystemTime;
 use csscolorparser::Color as CColor;
 use std::fs::File;
+use std::time::SystemTime;
 
 extern crate bytesize;
 
-mod utils;
-mod pdf;
-mod messenger;
 mod divider;
+mod messenger;
+mod pdf;
+mod utils;
 
 //use messenger::Messenger;
-use pdf::generate_pdf;
 use crate::messenger::Messenger;
+use pdf::generate_pdf;
 
 #[derive(Parser, Debug, Clone)]
 /// Example PDF generator
@@ -22,13 +22,11 @@ use crate::messenger::Messenger;
 /// Can be used to generate visually distinguishable PDFs with
 /// defined filesize and pages.
 ///
-///
-
 #[command(author, version, about, arg_required_else_help(true))]
 pub struct Args {
     /// Text color, web color names and hex codes (without #) are supported
     /// e.g. red, blue, hotpink, 00ff00, rgb(100,100,100)
-    #[arg(id="color")]
+    #[arg(id = "color")]
     color: CColor,
     /// Number of pages to generate
     #[arg(long, default_value_t = 1)]
@@ -42,7 +40,7 @@ pub struct Args {
     #[arg(short, long)]
     size: Option<ByteSize>,
     /// Text to print
-    #[arg(id="text")]
+    #[arg(id = "text")]
     text: Vec<String>,
     /// Don't print random number inside
     #[arg(long, default_value_t = false)]
@@ -66,14 +64,12 @@ pub struct Args {
     debug: bool,
     /// Enables super-precise size generation
     #[arg(long, default_value_t = false)]
-    super_precision: bool
+    super_precision: bool,
 }
 
 fn main() {
     let start_time = SystemTime::now();
     let mut args = Args::parse();
-
-    let desired_size = args.size.clone();
 
     args.random_string = utils::generate_random(10);
 
@@ -81,7 +77,7 @@ fn main() {
 
     let output_file = match args.output {
         Some(ref name) => String::from(name),
-        None =>  {
+        None => {
             let color_name = match args.color.name() {
                 Some(name) => name,
                 None => {
@@ -97,10 +93,9 @@ fn main() {
     let output_handle = File::create(&output_file).expect("Can't open file");
     let file_size = generate_pdf(args, &msg, output_handle);
 
-    //let delta =  desired_size.unwrap().as_u64() as i64 - file_size.as_u64() as i64;
-    //println!("Ask for: {:?}", desired_size.unwrap().as_u64() as i64 + delta +);
-
     let milliseconds = start_time.elapsed().expect("SystemTime Failure");
-    msg.stats(format!("Finished in {milliseconds:?}. Final file size: {file_size}.\nFile name: {output_file}"));
-    msg.silent(format!("{output_file}"));
+    msg.stats(format!(
+        "Finished in {milliseconds:?}. Final file size: {file_size}.\nFile name: {output_file}"
+    ));
+    msg.silent(output_file);
 }

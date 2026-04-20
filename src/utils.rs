@@ -1,13 +1,14 @@
-use rand::{thread_rng, Rng};
 use csscolorparser::Color as CColor;
 use pdf_canvas::graphicsstate::Color;
-
+use rand::{thread_rng, Rng};
 
 pub fn print_color_without_name() {
-    println!("
+    println!(
+        "
 Color can't be converted to human-readable name.
 Use --output option or choose different color.
-");
+"
+    );
 }
 
 pub fn generate_random(length: u8) -> String {
@@ -17,7 +18,7 @@ pub fn generate_random(length: u8) -> String {
 
     //TODO: This probalby should be rewritten into collect
     while i < length {
-        result.push(rng.gen_range::<u8,_>(48..58) as char);
+        result.push(rng.gen_range::<u8, _>(48..58) as char);
         i += 1;
     }
 
@@ -30,7 +31,11 @@ pub trait PDFColor {
 
 impl PDFColor for CColor {
     fn as_pdf_color(&self) -> Color {
-        let [r,g,b,_] = self.to_rgba8();
-        Color::RGB { red: r, green: g, blue: b }
+        let [r, g, b, _] = self.to_rgba8();
+        Color::RGB {
+            red: r,
+            green: g,
+            blue: b,
+        }
     }
 }
