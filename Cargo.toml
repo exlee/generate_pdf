@@ -1,11 +1,13 @@
 [package]
-name = "generate_pdf"
+name = "generate-sample-pdf"
 authors = ["Alexander Kaminski"]
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
-license = "Apache-2.0"
-keywords = ["pdf", "devtool", "generate"]
+license = "MIT"
+repository = "https://github.com/exlee/generate_pdf"
+keywords = ["pdf", "sample", "generator", "development", "testing", "dummy", "fixture"]
 categories = ["command-line-utilities", "filesystem"]
+
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

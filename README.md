@@ -1,4 +1,4 @@
-# generate_pdf
+# generate-sample-pdf
 
 ## What is it?
 
@@ -22,7 +22,7 @@ Known issues:
 ## Usage
 
 ```
-Usage: generate_pdf [OPTIONS] <color> [text]...
+Usage: generate-sample-pdf [OPTIONS] <color> [text]...
 
 Arguments:
   <color>    Text color, web color names and hex codes (without #) are supported e.g. red, blue, hotpink, 00ff00, rgb(100,100,100)
@@ -51,7 +51,7 @@ Options:
 ## Example PDF content
 
 ```
-> generate_pdf --output example.pdf --pages 10 --size 1MiB slateblue This is example file!
+> generate-sample-pdf --output example.pdf --pages 10 --size 1MiB slateblue This is example file!
 Finished in 21.494ms. Final file size: 1.1 MB.
 File name: example.pdf
 ```
